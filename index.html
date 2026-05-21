@@ -231,42 +231,44 @@
 
     <!-- FIREBASE SETUP & APP JAVASCRIPT -->
     
-                <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/auth.js";
+               
+     <script type="module">
+        // Sahi aur guaranteed working Firebase links
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        // Aapki real keys jo aapne add ki thin (Inhein aise hi rehne dein)
+        // Momin's Real Firebase Config
         const firebaseConfig = {
-            apiKey: "AIzaSy...", 
+            apiKey: "AIzaSyAW5hxpPklBDb8YuHbmPW8R2EbDxJbajPU",
             authDomain: "mj-sneakers.firebaseapp.com",
             projectId: "mj-sneakers",
-            storageBucket: "mj-sneakers.appspot.com",
+            storageBucket: "mj-sneakers.firebasestorage.app",
             messagingSenderId: "28031417192",
-            appId: "1:28031417192:web:..." 
+            appId: "1:28031417192:web:2d52d1d22b414b12b034dd",
+            measurementId: "G-GRS0VQTRBP"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // Yeh line ensure karegi ke HTML ka onclick="loginWithGoogle()" kaam kare!
+        // Global check taake button crash na ho
         window.loginWithGoogle = async function() {
-            console.log("Google Auth Triggered!");
+            console.log("Google Button Clicked!");
             try {
                 const result = await signInWithPopup(auth, provider);
-                console.log("Success: ", result.user);
+                console.log("Logged In User: ", result.user);
                 
-                // Modal ko band karne ke liye safely check karein
-                if (typeof toggleAuthModal === "function") {
-                    toggleAuthModal();
-                } else {
-                    // Agar function nahi mil raha to manual class remove karein
-                    document.getElementById('auth-modal')?.classList.add('hidden');
+                // Modal ko band karne ka custom shortcut
+                const modal = document.getElementById('auth-modal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    modal.style.opacity = '0'; // Agar opacity-0 handle ho rahi ho
                 }
                 
-                alert(`Welcome back, ${result.user.displayName}!`);
+                alert(`Welcome, ${result.user.displayName}!`);
             } catch (error) {
-                console.error("Auth Error details:", error);
+                console.error("Detailed Auth Error:", error);
                 alert("Login Failed: " + error.message);
             }
         };
@@ -277,6 +279,7 @@
             });
         };
 
+        // UI toggles
         onAuthStateChanged(auth, (user) => {
             const loginBtn = document.getElementById('login-btn');
             const userProfile = document.getElementById('user-profile');
