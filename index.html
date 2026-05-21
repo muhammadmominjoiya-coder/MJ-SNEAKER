@@ -230,46 +230,53 @@
     </script>
 
     <!-- FIREBASE SETUP & APP JAVASCRIPT -->
-    <script type="module">
-        // Firebase Libraries
+    
+                <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/auth.js";
 
-        // Firebase Configuration (Replace with your own Firebase Project Config credentials)
+        // Aapki real keys jo aapne add ki thin (Inhein aise hi rehne dein)
         const firebaseConfig = {
-  apiKey: "AIzaSyAW5hxpPklBDb8YuHbmPW8R2EbDxJbajPU",
-  authDomain: "mj-sneakers.firebaseapp.com",
-  projectId: "mj-sneakers",
-  storageBucket: "mj-sneakers.firebasestorage.app",
-  messagingSenderId: "28031417192",
-  appId: "1:28031417192:web:2d52d1d22b414b12b034dd",
-  measurementId: "G-GRS0VQTRBP"
-};
+            apiKey: "AIzaSy...", 
+            authDomain: "mj-sneakers.firebaseapp.com",
+            projectId: "mj-sneakers",
+            storageBucket: "mj-sneakers.appspot.com",
+            messagingSenderId: "28031417192",
+            appId: "1:28031417192:web:..." 
+        };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // Make functions globally available for inline onclick attributes
-        window.loginWithGoogle = async () => {
+        // Yeh line ensure karegi ke HTML ka onclick="loginWithGoogle()" kaam kare!
+        window.loginWithGoogle = async function() {
+            console.log("Google Auth Triggered!");
             try {
                 const result = await signInWithPopup(auth, provider);
-                toggleAuthModal();
+                console.log("Success: ", result.user);
+                
+                // Modal ko band karne ke liye safely check karein
+                if (typeof toggleAuthModal === "function") {
+                    toggleAuthModal();
+                } else {
+                    // Agar function nahi mil raha to manual class remove karein
+                    document.getElementById('auth-modal')?.classList.add('hidden');
+                }
+                
                 alert(`Welcome back, ${result.user.displayName}!`);
             } catch (error) {
-                console.error("Auth Error: ", error);
-                alert("Google Auth failed or modal was closed.");
+                console.error("Auth Error details:", error);
+                alert("Login Failed: " + error.message);
             }
         };
 
-        window.logout = () => {
+        window.logout = function() {
             signOut(auth).then(() => {
                 alert("Logged out successfully.");
             });
         };
 
-        // Track Auth State Changes
         onAuthStateChanged(auth, (user) => {
             const loginBtn = document.getElementById('login-btn');
             const userProfile = document.getElementById('user-profile');
@@ -277,16 +284,14 @@
             const userName = document.getElementById('user-name');
 
             if (user) {
-                // User is signed in
-                loginBtn.classList.add('hidden');
-                userProfile.classList.remove('hidden');
-                userImg.src = user.photoURL || 'https://via.placeholder.com/150';
-                userName.textContent = user.displayName.split(' ')[0];
-                window.currentUser = user; // Global reference
+                if(loginBtn) loginBtn.classList.add('hidden');
+                if(userProfile) userProfile.classList.remove('hidden');
+                if(userImg) userImg.src = user.photoURL || 'https://via.placeholder.com/150';
+                if(userName) userName.textContent = user.displayName.split(' ')[0];
+                window.currentUser = user; 
             } else {
-                // User is signed out
-                loginBtn.classList.remove('hidden');
-                userProfile.classList.add('hidden');
+                if(loginBtn) loginBtn.classList.remove('hidden');
+                if(userProfile) userProfile.classList.add('hidden');
                 window.currentUser = null;
             }
         });
