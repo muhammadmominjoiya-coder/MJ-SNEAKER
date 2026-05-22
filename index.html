@@ -154,25 +154,24 @@
     </section>
 
     <!-- CONTACT SECTION -->
-    <section id="contact" class="py-24 px-6 relative">
+   <section id="contact" class="py-24 px-6 relative">
         <div class="container mx-auto max-w-4xl">
             <div class="glass rounded-3xl p-8 md:p-12" data-aos="zoom-in">
                 <div class="text-center mb-10">
                     <h2 class="text-3xl font-bold mb-2">Get In <span class="gradient-text">Touch</span></h2>
                     <p class="text-gray-400">Have questions about sizing or orders? Drop us a line.</p>
                 </div>
-                <form onsubmit="handleContact(event)" class="space-y-6">
+                <form id="contactForm" onsubmit="handleFirebaseContact(event)" class="space-y-6">
                     <div class="grid md:grid-cols-2 gap-6">
-                        <input type="text" placeholder="Full Name" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition">
-                        <input type="email" placeholder="Email Address" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition">
+                        <input type="text" id="contactName" placeholder="Full Name" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition">
+                        <input type="email" id="contactEmail" placeholder="Email Address" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition">
                     </div>
-                    <textarea placeholder="Your Message" rows="5" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition"></textarea>
+                    <textarea id="contactMessage" placeholder="Your Message" rows="5" required class="w-full bg-[#111625] border border-gray-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-red-500 transition"></textarea>
                     <button type="submit" class="w-full gradient-bg text-white font-bold py-4 rounded-xl shadow-lg hover:opacity-90 transition">Send Message</button>
                 </form>
             </div>
         </div>
     </section>
-
     <!-- FOOTER -->
     <footer class="py-8 text-center text-sm text-gray-500 border-t border-gray-900">
         &copy; 2026 <span class="text-white font-semibold">MJ SNEAKERS</span>. All Rights Reserved.
@@ -232,10 +231,10 @@
     <!-- FIREBASE SETUP & APP JAVASCRIPT -->
     
                
-    <script type="module">
+   
+            <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // NEW: Firestore Database import kiya
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // Momin's Real Firebase Config
@@ -252,7 +251,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        const db = getFirestore(app); // Database initialize ho gaya
+        const db = getFirestore(app);
 
         window.currentUser = null;
 
@@ -302,39 +301,24 @@
             }
         });
 
-        // 3. MAGIC FUNCTION: ORDERS SAVE KARNE KE LIYE
-        // Jab bhi user checkout karega, aapne cart items aur total price isme bhejni hai
-        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
-            if (!window.currentUser) {
-                alert("Please login with Google first to place an order!");
-                document.getElementById('auth-modal')?.classList.remove('hidden');
-                return;
-            }
+        // 3. CONTACT FORM SUBMIT HANDLE (HTML KE SATH CONNECTION)
+        window.handleFirebaseContact = async function(event) {
+            event.preventDefault(); // Page refresh hone se rokne ke liye
+            
+            const name = document.getElementById('contactName').value;
+            const email = document.getElementById('contactEmail').value;
+            const messageText = document.getElementById('contactMessage').value;
 
-            try {
-                const orderData = {
-                    customerName: window.currentUser.displayName,
-                    customerEmail: window.currentUser.email,
-                    customerUid: window.currentUser.uid,
-                    items: cartItems, // Array of products
-                    total: totalPrice,
-                    status: "Pending",
-                    createdAt: serverTimestamp()
-                };
+            console.log("Sending Message to Firebase...", { name, email, messageText });
 
-                const docRef = await addDoc(collection(db, "orders"), orderData);
-                console.log("Order saved with ID: ", docRef.id);
-                alert("🔥 Order Placed Successfully! Checked in Firebase.");
-                return true;
-            } catch (error) {
-                console.error("Error adding order: ", error);
-                alert("Order Failed to save: " + error.message);
-                return false;
+            const success = await window.saveMessageToFirebase(name, email, messageText);
+
+            if (success) {
+                document.getElementById('contactForm').reset(); // Form khali karne ke liye
             }
         };
 
-        // 4. MAGIC FUNCTION: CONTACT US MESSAGES KE LIYE
-        // Is function ko contact form ke submit button par handle karein
+        // 4. FIREBASE MESSAGE SAVE FUNCTION
         window.saveMessageToFirebase = async function(name, email, messageText) {
             try {
                 const messageData = {
@@ -351,6 +335,36 @@
             } catch (error) {
                 console.error("Error sending message: ", error);
                 alert("Failed to send message: " + error.message);
+                return false;
+            }
+        };
+
+        // 5. FIREBASE ORDERS SAVE FUNCTION
+        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
+            if (!window.currentUser) {
+                alert("Please login with Google first to place an order!");
+                document.getElementById('auth-modal')?.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const orderData = {
+                    customerName: window.currentUser.displayName,
+                    customerEmail: window.currentUser.email,
+                    customerUid: window.currentUser.uid,
+                    items: cartItems,
+                    total: totalPrice,
+                    status: "Pending",
+                    createdAt: serverTimestamp()
+                };
+
+                const docRef = await addDoc(collection(db, "orders"), orderData);
+                console.log("Order saved with ID: ", docRef.id);
+                alert("🔥 Order Placed Successfully! Checked in Firebase.");
+                return true;
+            } catch (error) {
+                console.error("Error adding order: ", error);
+                alert("Order Failed to save: " + error.message);
                 return false;
             }
         };
