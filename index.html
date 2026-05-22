@@ -230,9 +230,7 @@
 
     <!-- FIREBASE SETUP & APP JAVASCRIPT -->
     
-               
-   
-            <script type="module">
+               <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -301,20 +299,16 @@
             }
         });
 
-        // 3. CONTACT FORM SUBMIT HANDLE (HTML KE SATH CONNECTION)
+        // 3. CONTACT FORM SUBMIT HANDLE
         window.handleFirebaseContact = async function(event) {
-            event.preventDefault(); // Page refresh hone se rokne ke liye
-            
+            event.preventDefault();
             const name = document.getElementById('contactName').value;
             const email = document.getElementById('contactEmail').value;
             const messageText = document.getElementById('contactMessage').value;
 
-            console.log("Sending Message to Firebase...", { name, email, messageText });
-
             const success = await window.saveMessageToFirebase(name, email, messageText);
-
             if (success) {
-                document.getElementById('contactForm').reset(); // Form khali karne ke liye
+                document.getElementById('contactForm').reset();
             }
         };
 
@@ -329,8 +323,6 @@
                 };
 
                 const docRef = await addDoc(collection(db, "messages"), messageData);
-                console.log("Message saved with ID: ", docRef.id);
-                alert("🚀 Message Sent! We will contact you soon.");
                 return true;
             } catch (error) {
                 console.error("Error sending message: ", error);
@@ -339,14 +331,46 @@
             }
         };
 
-        // 5. FIREBASE ORDERS SAVE FUNCTION
-        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
+        // 5. NEW CONNECTION: CART DRAW CHECKOUT HANDLE
+        window.handleFirebaseCheckout = async function() {
+            // Check karein ke user login hai ya nahi
             if (!window.currentUser) {
                 alert("Please login with Google first to place an order!");
                 document.getElementById('auth-modal')?.classList.remove('hidden');
                 return;
             }
 
+            // Aapki website ke global cart array aur total elements se data uthaya
+            // Agar aapka array variable 'cart' ke alawa kisi aur naam se hai, to use badal dena
+            const currentCart = window.cart || []; 
+            const totalPrice = document.getElementById('cart-total')?.textContent || "$0.00";
+
+            if (currentCart.length === 0) {
+                alert("Your cart is empty!");
+                return;
+            }
+
+            console.log("Sending Order to Firebase...", { currentCart, totalPrice });
+
+            const success = await window.saveOrderToFirebase(currentCart, totalPrice);
+            
+            if (success) {
+                // Order hone ke baad website ka cart khali karne aur UI refresh karne ke liye
+                window.cart = [];
+                if (typeof window.updateCartUI === 'function') {
+                    window.updateCartUI();
+                } else if (typeof window.renderCart === 'function') {
+                    window.renderCart();
+                }
+                // Cart drawer ko close karne ke liye
+                if (typeof window.toggleCart === 'function') {
+                    window.toggleCart();
+                }
+            }
+        };
+
+        // 6. FIREBASE ORDERS SAVE FUNCTION
+        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
             try {
                 const orderData = {
                     customerName: window.currentUser.displayName,
