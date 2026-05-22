@@ -228,7 +228,8 @@
         AOS.init({ once: true });
     </script>
               
-       <!-- FIREBASE SETUP & ALL APP JAVASCRIPT WITH FIRESTORE, CONTACT & CHECKOUT -->
+     
+                    <!-- FIREBASE SETUP & ALL APP JAVASCRIPT WITH DOM-BASED CHECKOUT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -330,7 +331,7 @@
             }
         };
 
-        // 5. CART DRAWER CHECKOUT HANDLE (Directly attached to window)
+        // 5. SMART CHECKOUT HANDLE (Direct Screen Se Data Read Karega)
         window.handleFirebaseCheckout = async function() {
             console.log("Place Order Button Clicked!");
             
@@ -340,27 +341,46 @@
                 return;
             }
 
-            // Cart data local storage ya global variable se uthana
-            const currentCart = window.cart || JSON.parse(localStorage.getItem('cart')) || []; 
+            // Screen se Total Amount uthayi
             const totalPrice = document.getElementById('cart-total')?.textContent || "$0.00";
 
-            if (currentCart.length === 0) {
+            // Cart Items ke area se text utha kar check kiya ke khali to nahi
+            const cartItemsArea = document.getElementById('cart-items');
+            const cartHtmlContent = cartItemsArea ? cartItemsArea.innerHTML : "";
+
+            // Agar cart mein default text hai ya koi shoe text maujood nahi hai
+            if (totalPrice === "$0.00" || cartHtmlContent.includes("Your cart is feeling a bit light!")) {
                 alert("Your cart is empty!");
                 return;
             }
 
-            console.log("Sending Order to Firebase...", { currentCart, totalPrice });
+            // Screen par jo bhi items dikh rahe hain, unka text nikal liya
+            let extractedItems = [];
+            const itemElements = cartItemsArea.querySelectorAll('div');
+            if (itemElements.length > 0) {
+                itemElements.forEach(el => {
+                    if (el.textContent.trim()) {
+                        extractedItems.push(el.textContent.trim().replace(/\s+/g, ' '));
+                    }
+                });
+            } else {
+                extractedItems.push(cartItemsArea.textContent.trim().replace(/\s+/g, ' '));
+            }
 
-            const success = await window.saveOrderToFirebase(currentCart, totalPrice);
+            console.log("Sending Extracted Order to Firebase...", { extractedItems, totalPrice });
+
+            const success = await window.saveOrderToFirebase(extractedItems, totalPrice);
             
             if (success) {
-                // Cart clear karne ka logic
-                window.cart = [];
-                localStorage.setItem('cart', JSON.stringify([]));
-                
-                if (typeof window.updateCartUI === 'function') window.updateCartUI();
-                if (typeof window.renderCart === 'function') window.renderCart();
-                if (typeof window.toggleCart === 'function') window.toggleCart();
+                // Purane checkout handle ko bhi trigger kar dete hain taake cart reset ho jaye
+                if (typeof window.checkoutOrder === 'function') {
+                    try { window.checkoutOrder(); } catch(e) { console.log(e); }
+                } else {
+                    // Agar purana function na mile to manually reset karein
+                    if (cartItemsArea) cartItemsArea.innerHTML = '<p class="text-gray-500 text-center py-10">Your cart is feeling a bit light!</p>';
+                    if (document.getElementById('cart-total')) document.getElementById('cart-total').textContent = "$0.00";
+                    if (typeof window.toggleCart === 'function') window.toggleCart();
+                }
             }
         };
 
