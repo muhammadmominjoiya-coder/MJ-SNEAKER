@@ -227,10 +227,9 @@
     <script>
         AOS.init({ once: true });
     </script>
-
-    <!-- FIREBASE SETUP & APP JAVASCRIPT -->
-    
-               <script type="module">
+              
+       <!-- FIREBASE SETUP & ALL APP JAVASCRIPT WITH FIRESTORE, CONTACT & CHECKOUT -->
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -331,18 +330,18 @@
             }
         };
 
-        // 5. NEW CONNECTION: CART DRAW CHECKOUT HANDLE
+        // 5. CART DRAWER CHECKOUT HANDLE (Directly attached to window)
         window.handleFirebaseCheckout = async function() {
-            // Check karein ke user login hai ya nahi
+            console.log("Place Order Button Clicked!");
+            
             if (!window.currentUser) {
                 alert("Please login with Google first to place an order!");
                 document.getElementById('auth-modal')?.classList.remove('hidden');
                 return;
             }
 
-            // Aapki website ke global cart array aur total elements se data uthaya
-            // Agar aapka array variable 'cart' ke alawa kisi aur naam se hai, to use badal dena
-            const currentCart = window.cart || []; 
+            // Cart data local storage ya global variable se uthana
+            const currentCart = window.cart || JSON.parse(localStorage.getItem('cart')) || []; 
             const totalPrice = document.getElementById('cart-total')?.textContent || "$0.00";
 
             if (currentCart.length === 0) {
@@ -355,17 +354,13 @@
             const success = await window.saveOrderToFirebase(currentCart, totalPrice);
             
             if (success) {
-                // Order hone ke baad website ka cart khali karne aur UI refresh karne ke liye
+                // Cart clear karne ka logic
                 window.cart = [];
-                if (typeof window.updateCartUI === 'function') {
-                    window.updateCartUI();
-                } else if (typeof window.renderCart === 'function') {
-                    window.renderCart();
-                }
-                // Cart drawer ko close karne ke liye
-                if (typeof window.toggleCart === 'function') {
-                    window.toggleCart();
-                }
+                localStorage.setItem('cart', JSON.stringify([]));
+                
+                if (typeof window.updateCartUI === 'function') window.updateCartUI();
+                if (typeof window.renderCart === 'function') window.renderCart();
+                if (typeof window.toggleCart === 'function') window.toggleCart();
             }
         };
 
