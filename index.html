@@ -232,10 +232,11 @@
     <!-- FIREBASE SETUP & APP JAVASCRIPT -->
     
                
-     <script type="module">
-        // Sahi aur guaranteed working Firebase links
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // NEW: Firestore Database import kiya
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // Momin's Real Firebase Config
         const firebaseConfig = {
@@ -251,21 +252,22 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
+        const db = getFirestore(app); // Database initialize ho gaya
 
-        // Global check taake button crash na ho
+        window.currentUser = null;
+
+        // 1. GOOGLE LOGIN FUNCTION
         window.loginWithGoogle = async function() {
             console.log("Google Button Clicked!");
             try {
                 const result = await signInWithPopup(auth, provider);
                 console.log("Logged In User: ", result.user);
                 
-                // Modal ko band karne ka custom shortcut
                 const modal = document.getElementById('auth-modal');
                 if (modal) {
                     modal.classList.add('hidden');
-                    modal.style.opacity = '0'; // Agar opacity-0 handle ho rahi ho
+                    modal.style.opacity = '0';
                 }
-                
                 alert(`Welcome, ${result.user.displayName}!`);
             } catch (error) {
                 console.error("Detailed Auth Error:", error);
@@ -273,13 +275,14 @@
             }
         };
 
+        // 2. LOGOUT FUNCTION
         window.logout = function() {
             signOut(auth).then(() => {
                 alert("Logged out successfully.");
             });
         };
 
-        // UI toggles
+        // Auth state monitor loop
         onAuthStateChanged(auth, (user) => {
             const loginBtn = document.getElementById('login-btn');
             const userProfile = document.getElementById('user-profile');
@@ -298,6 +301,59 @@
                 window.currentUser = null;
             }
         });
+
+        // 3. MAGIC FUNCTION: ORDERS SAVE KARNE KE LIYE
+        // Jab bhi user checkout karega, aapne cart items aur total price isme bhejni hai
+        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
+            if (!window.currentUser) {
+                alert("Please login with Google first to place an order!");
+                document.getElementById('auth-modal')?.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const orderData = {
+                    customerName: window.currentUser.displayName,
+                    customerEmail: window.currentUser.email,
+                    customerUid: window.currentUser.uid,
+                    items: cartItems, // Array of products
+                    total: totalPrice,
+                    status: "Pending",
+                    createdAt: serverTimestamp()
+                };
+
+                const docRef = await addDoc(collection(db, "orders"), orderData);
+                console.log("Order saved with ID: ", docRef.id);
+                alert("🔥 Order Placed Successfully! Checked in Firebase.");
+                return true;
+            } catch (error) {
+                console.error("Error adding order: ", error);
+                alert("Order Failed to save: " + error.message);
+                return false;
+            }
+        };
+
+        // 4. MAGIC FUNCTION: CONTACT US MESSAGES KE LIYE
+        // Is function ko contact form ke submit button par handle karein
+        window.saveMessageToFirebase = async function(name, email, messageText) {
+            try {
+                const messageData = {
+                    senderName: name,
+                    senderEmail: email,
+                    message: messageText,
+                    createdAt: serverTimestamp()
+                };
+
+                const docRef = await addDoc(collection(db, "messages"), messageData);
+                console.log("Message saved with ID: ", docRef.id);
+                alert("🚀 Message Sent! We will contact you soon.");
+                return true;
+            } catch (error) {
+                console.error("Error sending message: ", error);
+                alert("Failed to send message: " + error.message);
+                return false;
+            }
+        };
     </script>
 
     <!-- SHOPPING CART & UI LOGIC SCRIPT -->
