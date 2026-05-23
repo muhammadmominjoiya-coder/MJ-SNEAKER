@@ -229,7 +229,8 @@
     </script>
               
      
-                    <!-- FIREBASE SETUP & ALL APP JAVASCRIPT WITH DOM-BASED CHECKOUT -->
+                    
+                <!-- FIREBASE SETUP & DIRECT INJECT CHECKOUT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -288,7 +289,7 @@
 
             if (user) {
                 if(loginBtn) loginBtn.classList.add('hidden');
-                if(userProfile) userProfile.classList.remove('hidden');
+                if(userProfile) textContent = user.displayName.split(' ')[0];
                 if(userImg) userImg.src = user.photoURL || 'https://via.placeholder.com/150';
                 if(userName) userName.textContent = user.displayName.split(' ')[0];
                 window.currentUser = user; 
@@ -331,30 +332,27 @@
             }
         };
 
-        // 5. SMART CHECKOUT HANDLE (Direct Screen Se Data Read Karega)
-        window.handleFirebaseCheckout = async function() {
-            console.log("Place Order Button Clicked!");
-            
+        // 5. DIRECT HOOK OVERRIDE FOR YOUR BUTTON (checkoutOrder)
+        // Yeh aapke button ki click ko direct capture kar ke Firebase bhejega bina HTML badle!
+        window.checkoutOrder = async function() {
+            console.log("Direct Hook: Place Order Triggered!");
+
             if (!window.currentUser) {
                 alert("Please login with Google first to place an order!");
                 document.getElementById('auth-modal')?.classList.remove('hidden');
                 return;
             }
 
-            // Screen se Total Amount uthayi
             const totalPrice = document.getElementById('cart-total')?.textContent || "$0.00";
-
-            // Cart Items ke area se text utha kar check kiya ke khali to nahi
             const cartItemsArea = document.getElementById('cart-items');
             const cartHtmlContent = cartItemsArea ? cartItemsArea.innerHTML : "";
 
-            // Agar cart mein default text hai ya koi shoe text maujood nahi hai
             if (totalPrice === "$0.00" || cartHtmlContent.includes("Your cart is feeling a bit light!")) {
                 alert("Your cart is empty!");
                 return;
             }
 
-            // Screen par jo bhi items dikh rahe hain, unka text nikal liya
+            // Screen par mojood items ka text extract karna
             let extractedItems = [];
             const itemElements = cartItemsArea.querySelectorAll('div');
             if (itemElements.length > 0) {
@@ -367,44 +365,36 @@
                 extractedItems.push(cartItemsArea.textContent.trim().replace(/\s+/g, ' '));
             }
 
-            console.log("Sending Extracted Order to Firebase...", { extractedItems, totalPrice });
-
-            const success = await window.saveOrderToFirebase(extractedItems, totalPrice);
-            
-            if (success) {
-                // Purane checkout handle ko bhi trigger kar dete hain taake cart reset ho jaye
-                if (typeof window.checkoutOrder === 'function') {
-                    try { window.checkoutOrder(); } catch(e) { console.log(e); }
-                } else {
-                    // Agar purana function na mile to manually reset karein
-                    if (cartItemsArea) cartItemsArea.innerHTML = '<p class="text-gray-500 text-center py-10">Your cart is feeling a bit light!</p>';
-                    if (document.getElementById('cart-total')) document.getElementById('cart-total').textContent = "$0.00";
-                    if (typeof window.toggleCart === 'function') window.toggleCart();
-                }
-            }
-        };
-
-        // 6. FIREBASE ORDERS SAVE FUNCTION
-        window.saveOrderToFirebase = async function(cartItems, totalPrice) {
             try {
                 const orderData = {
                     customerName: window.currentUser.displayName,
                     customerEmail: window.currentUser.email,
                     customerUid: window.currentUser.uid,
-                    items: cartItems,
+                    items: extractedItems,
                     total: totalPrice,
                     status: "Pending",
                     createdAt: serverTimestamp()
                 };
 
+                // Direct Save to Firestore
                 const docRef = await addDoc(collection(db, "orders"), orderData);
-                console.log("Order saved with ID: ", docRef.id);
-                alert("🔥 Order Placed Successfully! Checked in Firebase.");
-                return true;
+                console.log("Order completely saved with ID: ", docRef.id);
+                
+                alert("🔥 Order Placed Successfully! Data Sent to Firebase.");
+
+                // Cart aur UI ko manually reset karne ka code
+                if (cartItemsArea) cartItemsArea.innerHTML = '<p class="text-gray-500 text-center py-10">Your cart is feeling a bit light!</p>';
+                if (document.getElementById('cart-total')) document.getElementById('cart-total').textContent = "$0.00";
+                
+                // Agar aapka local variable cart refresh karna ho
+                if (window.cart) window.cart = [];
+                
+                // Drawer band karna
+                if (typeof window.toggleCart === 'function') window.toggleCart();
+
             } catch (error) {
-                console.error("Error adding order: ", error);
-                alert("Order Failed to save: " + error.message);
-                return false;
+                console.error("Firebase Order Blocked: ", error);
+                alert("Firebase Error: " + error.message);
             }
         };
     </script>
