@@ -215,7 +215,7 @@
                 <span>Total Amount:</span>
                 <span id="cart-total">$0.00</span>
             </div>
-           <button onclick="handleFirebaseCheckout()" class="w-full gradient-bg text-white font-bold py-4 rounded-xl shadow-lg hover:opacity-90 transition tracking-wide">
+          <button onclick="checkoutOrder()" class="w-full gradient-bg text-white font-bold py-4 rounded-xl shadow-lg hover:opacity-90 transition tracking-wide">
     PLACE ORDER
 </button>
         </div>
@@ -228,9 +228,7 @@
         AOS.init({ once: true });
     </script>
               
-     
-                    
-                <!-- FIREBASE SETUP & DIRECT INJECT CHECKOUT -->
+          <!-- FIREBASE SETUP & DIRECT INJECT CHECKOUT (FIXED) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -280,7 +278,7 @@
             });
         };
 
-        // Auth state monitor loop
+        // Auth state monitor loop (BUG FIXED HERE)
         onAuthStateChanged(auth, (user) => {
             const loginBtn = document.getElementById('login-btn');
             const userProfile = document.getElementById('user-profile');
@@ -289,7 +287,7 @@
 
             if (user) {
                 if(loginBtn) loginBtn.classList.add('hidden');
-                if(userProfile) textContent = user.displayName.split(' ')[0];
+                if(userProfile) userProfile.classList.remove('hidden');
                 if(userImg) userImg.src = user.photoURL || 'https://via.placeholder.com/150';
                 if(userName) userName.textContent = user.displayName.split(' ')[0];
                 window.currentUser = user; 
@@ -332,8 +330,7 @@
             }
         };
 
-        // 5. DIRECT HOOK OVERRIDE FOR YOUR BUTTON (checkoutOrder)
-        // Yeh aapke button ki click ko direct capture kar ke Firebase bhejega bina HTML badle!
+        // 5. DIRECT HOOK OVERRIDE FOR checkoutOrder
         window.checkoutOrder = async function() {
             console.log("Direct Hook: Place Order Triggered!");
 
@@ -386,10 +383,7 @@
                 if (cartItemsArea) cartItemsArea.innerHTML = '<p class="text-gray-500 text-center py-10">Your cart is feeling a bit light!</p>';
                 if (document.getElementById('cart-total')) document.getElementById('cart-total').textContent = "$0.00";
                 
-                // Agar aapka local variable cart refresh karna ho
                 if (window.cart) window.cart = [];
-                
-                // Drawer band karna
                 if (typeof window.toggleCart === 'function') window.toggleCart();
 
             } catch (error) {
@@ -398,7 +392,6 @@
             }
         };
     </script>
-
     <!-- SHOPPING CART & UI LOGIC SCRIPT -->
     <script>
         let cart = [];
